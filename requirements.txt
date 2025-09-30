@@ -1,0 +1,10 @@
+facenet-pytorch
+opencv-python
+torch
+torchvision
+insightface
+deep-sort-realtime
+numpy
+pillow
+lancedb
+pyarrow
