@@ -1,75 +1,83 @@
+##test
+
 import warnings
 
 warnings.filterwarnings("ignore", category=FutureWarning)
-from facenet_pytorch import InceptionResnetV1
 import cv2
-import torch
-from insightface.app import FaceAnalysis
-from insightface.utils import face_align
-import torch.nn.functional as F
+from insightface.model_zoo import get_model
 from deep_sort_realtime.deepsort_tracker import DeepSort
 from collections import defaultdict, Counter
-import json
-from urllib.parse import quote
-import subprocess
-import numpy as np
-from torchvision import transforms
-from PIL import Image
-import os
-import lancedb
-import pyarrow as pa
-from helper import find_best_match
 
-db = lancedb.connect("face_db")
-
-face_table = db.open_table("face_data")
+from helper import align_faces, get_face_embeddings, batch_vector_search, prepare_deepsort_inputs
 
 
-transform = transforms.Compose([
-    transforms.ToTensor(),  # Converts PIL/numpy to tensor and scales to [0,1]
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Scales to [-1,1]
-    ])
+detector = get_model(name = "/home/scifre/.insightface/models/buffalo_s/det_500m.onnx", providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+detector.prepare(ctx_id=0, input_size=(640, 640))
 
+tracker = DeepSort(max_age=20, max_cosine_distance=0.6, max_iou_distance=0.8)
 
-app = FaceAnalysis(providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
-app.prepare(ctx_id=0, det_size=(640, 640))
-
-model = InceptionResnetV1(pretrained="vggface2").eval().to("cuda")
-
-video_path = "VID_20250915_155804628.mp4"
+video_path = "video_2.mp4"
 
 cap = cv2.VideoCapture(video_path)
+
+prediction_dict = defaultdict(list)
+
+with open ("poi.txt", "r") as f:
+    poi = [line.strip() for line in f.readlines()]
+
 
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
+    
+    #detect faces
+    boxes, landmarks = detector.detect(frame)
+    #align faces
+    aligned_faces = align_faces(frame, landmarks)
+    
+    #generate embeddings
+    embeddings = get_face_embeddings(aligned_faces)
+    #perform vector search
+    identity_results = batch_vector_search(embeddings, threshold=0.40)
+    #prepare inputs for deepsort
+    identities = prepare_deepsort_inputs(boxes, identity_results)
 
-    faces = app.get(frame)
-
-
-
-    for face in faces:
-        box = face.bbox.astype(int)
-
-        aligned_face = face_align.norm_crop(frame, face.kps, image_size=224)
-        aligned_face = cv2.resize(aligned_face, (160, 160))
-        aligned_face = cv2.cvtColor(aligned_face, cv2.COLOR_BGR2RGB)
+    #update tracker
+    tracks = tracker.update_tracks(identities, frame=frame)
+    for track in tracks:
+        if not track.is_confirmed():
+            continue
+        name = track.det_class
+        score = track.get_det_conf()
         
-        face_tensor = transform(aligned_face).unsqueeze(0)
+        #print(name, score)
+        track_id = track.track_id
+        t, l, b, r = map(int, track.to_tlbr())
 
-        embedding = model(face_tensor.to("cuda"))
-        embedding = F.normalize(embedding, p=2, dim=1).cpu().detach().numpy()
+        face_center = ((l + r) // 2, (t + b) // 2)
 
-        label, distance = find_best_match(face_table, embedding)
+        prediction_dict[track_id].append(name)
 
-        name, pose = label.split("-")
-        if name == "ayush":
-            text_color = (0,0, 255)
-        else:
-            text_color = (0, 255, 0)
-        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), text_color, 2)
-        cv2.putText(frame, name, (box[0], box[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 2)
+        if(len(prediction_dict[track_id]))>=10:
+            counter = Counter(prediction_dict[track_id])
+            prediction = counter.most_common(1)[0][0]
+            
+            cv2.rectangle(frame, (t, l), (b, r), (0, 255, 0), 2)
+
+            if score is not None:
+                cv2.putText(frame, f"{prediction}-{score:.2f}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            else:
+                # If score is None, just draw the name
+                cv2.putText(frame, f"{prediction}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+        prediction_dict[track_id] = prediction_dict[track_id][-10:]
+    
+    
     cv2.imshow('Video', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+
+cap.release()
+cv2.destroyAllWindows()
