@@ -16,7 +16,7 @@ detector.prepare(ctx_id=0, input_size=(640, 640))
 
 tracker = DeepSort(max_age=20, max_cosine_distance=0.6, max_iou_distance=0.8)
 
-video_path = "video_2.mp4"
+video_path = "video_4.mp4"
 
 cap = cv2.VideoCapture(video_path)
 
