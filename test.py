@@ -26,6 +26,7 @@ video_dir = "cctv_videos"
 video_name = "cp_lab1.mp4"
 
 cap = cv2.VideoCapture(f"{video_dir}/{video_name}")
+#cap = cv2.VideoCapture(0)
 
 prediction_dict = defaultdict(lambda: {
     "name": "unknown",
@@ -70,7 +71,7 @@ while cap.isOpened():
 
 
         if name == "unknown":
-            person_crop = clean_frame[t:b, l:r]
+            person_crop = clean_frame[l:r, t:b]
             if person_crop.size != 0:
                 faces = app.get(person_crop)
                 if len(faces) != 0:
