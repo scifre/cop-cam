@@ -19,14 +19,21 @@ app.prepare(ctx_id=0, det_size=(640, 640))
 yolo_model = YOLO("yolov8m.pt").to(device)
 
 #LOADING DEEPSORT
-tracker = DeepSort(max_age=20, max_cosine_distance=0.6, max_iou_distance=0.8)
+tracker = DeepSort(max_age=40, max_cosine_distance=0.6, max_iou_distance=0.8)
 
 #LOADING VIDEO
 video_dir = "cctv_videos"
-video_name = "cp_lab1.mp4"
+video_name = "loby.mp4"
 
 cap = cv2.VideoCapture(f"{video_dir}/{video_name}")
 #cap = cv2.VideoCapture(0)
+
+width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+fps    = cap.get(cv2.CAP_PROP_FPS)
+
+fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+out = cv2.VideoWriter(f"output_videos/{video_name}", fourcc, fps, (width, height))
 
 prediction_dict = defaultdict(lambda: {
     "name": "unknown",
@@ -77,20 +84,25 @@ while cap.isOpened():
                 if len(faces) != 0:
                     face = faces[0]
                     embedding = face.embedding
-                    identity_results = vector_search(embedding, threshold=0.40)
+                    identity_results = vector_search(embedding, threshold=0.80)
                     name, score = identity_results
+                    score = float(score)
                     prediction_dict[track_id]["name"] = name
                     cv2.rectangle(frame, (t, l), (b, r), (255, 0, 0), 2)
                     cv2.putText(frame, f"{name}-{score:.2f}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
         else:
             cv2.rectangle(frame, (t, l), (b, r), (0, 255, 255), 2)
-            cv2.putText(frame, f"{name}-{score:.2f}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-
+            if score is not None:
+                cv2.putText(frame, f"{name}-{score:.2f}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+            else:
+                cv2.putText(frame, f"{name}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.imshow('Video', frame)
+    out.write(frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 
 cap.release()
+out.release()
 cv2.destroyAllWindows()

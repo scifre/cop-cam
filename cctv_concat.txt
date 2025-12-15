@@ -1,0 +1,6 @@
+cctv_videos/lift.mp4
+cctv_videos/loby.mp4
+cctv_videos/vlsi.mp4
+cctv_videos/cp_lab2.mp4
+cctv_videos/cp_lab1.mp4
+cctv_videos/iot.mp4
