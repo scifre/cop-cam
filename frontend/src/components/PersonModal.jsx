@@ -71,5 +71,3 @@ function PersonModal({ person, onClose }) {
 
 export default PersonModal
 
-
-

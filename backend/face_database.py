@@ -81,5 +81,3 @@ class FaceDatabase:
 # Global instance
 face_db = FaceDatabase()
 
-
-
