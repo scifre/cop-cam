@@ -1,79 +1,91 @@
 ##test
 
 import warnings
-
+from ultralytics import YOLO
 warnings.filterwarnings("ignore", category=FutureWarning)
 import cv2
-from insightface.model_zoo import get_model
+from insightface.app import FaceAnalysis
 from deep_sort_realtime.deepsort_tracker import DeepSort
 from collections import defaultdict, Counter
+import torch
+from helper import vector_search
 
-from helper import align_faces, get_face_embeddings, batch_vector_search, prepare_deepsort_inputs
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
+#LOADING MODEL 
+app = FaceAnalysis(providers=["CUDAExecutionProvider", "CPUExecutionProvider"], allowed_modules=["detection", "recognition"])
+app.prepare(ctx_id=0, det_size=(640, 640))
 
-detector = get_model(name = "/home/scifre/.insightface/models/buffalo_s/det_500m.onnx", providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-detector.prepare(ctx_id=0, input_size=(640, 640))
+yolo_model = YOLO("yolov8m.pt").to(device)
 
+#LOADING DEEPSORT
 tracker = DeepSort(max_age=20, max_cosine_distance=0.6, max_iou_distance=0.8)
 
-video_path = "video_4.mp4"
+#LOADING VIDEO
+video_dir = "cctv_videos"
+video_name = "cp_lab1.mp4"
 
-cap = cv2.VideoCapture(video_path)
+cap = cv2.VideoCapture(f"{video_dir}/{video_name}")
 
-prediction_dict = defaultdict(list)
+prediction_dict = defaultdict(lambda: {
+    "name": "unknown",
+    "predictions": []
+})
 
 with open ("poi.txt", "r") as f:
     poi = [line.strip() for line in f.readlines()]
 
 
 while cap.isOpened():
+    identities = []
     ret, frame = cap.read()
     if not ret:
         break
-    
-    #detect faces
-    boxes, landmarks = detector.detect(frame)
-    #align faces
-    aligned_faces = align_faces(frame, landmarks)
-    
-    #generate embeddings
-    embeddings = get_face_embeddings(aligned_faces)
-    #perform vector search
-    identity_results = batch_vector_search(embeddings, threshold=0.40)
-    #prepare inputs for deepsort
-    identities = prepare_deepsort_inputs(boxes, identity_results)
+    clean_frame = frame.copy()
+    persons = yolo_model(frame)[0]
 
+    for person in persons.boxes:
+        if int(person.cls[0]) == 0:
+            x1, y1, x2, y2 = map(int, person.xyxy[0])
+            conf = person.conf[0].cpu().numpy()
+            #person_frame = frame[y1:y2, x1:x2]
+            #identity_results = vector_search(embedding, threshold=0.40)
+            identities.append(([x1, y1, x2 - x1, y2 - y1], conf))
+    #prepare inputs for deepsort
+            
     #update tracker
     tracks = tracker.update_tracks(identities, frame=frame)
     for track in tracks:
         if not track.is_confirmed():
             continue
-        name = track.det_class
+        track_id = track.track_id
+        
+        name = prediction_dict[track_id]["name"]
         score = track.get_det_conf()
         
         #print(name, score)
-        track_id = track.track_id
         t, l, b, r = map(int, track.to_tlbr())
 
-        face_center = ((l + r) // 2, (t + b) // 2)
+        person_center = ((l + r) // 2, (t + b) // 2)
 
-        prediction_dict[track_id].append(name)
 
-        if(len(prediction_dict[track_id]))>=10:
-            counter = Counter(prediction_dict[track_id])
-            prediction = counter.most_common(1)[0][0]
-            
-            cv2.rectangle(frame, (t, l), (b, r), (0, 255, 0), 2)
+        if name == "unknown":
+            person_crop = clean_frame[t:b, l:r]
+            if person_crop.size != 0:
+                faces = app.get(person_crop)
+                if len(faces) != 0:
+                    face = faces[0]
+                    embedding = face.embedding
+                    identity_results = vector_search(embedding, threshold=0.40)
+                    name, score = identity_results
+                    prediction_dict[track_id]["name"] = name
+                    cv2.rectangle(frame, (t, l), (b, r), (255, 0, 0), 2)
+                    cv2.putText(frame, f"{name}-{score:.2f}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
-            if score is not None:
-                cv2.putText(frame, f"{prediction}-{score:.2f}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            else:
-                # If score is None, just draw the name
-                cv2.putText(frame, f"{prediction}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        else:
+            cv2.rectangle(frame, (t, l), (b, r), (0, 255, 255), 2)
+            cv2.putText(frame, f"{name}-{score:.2f}", (t, l - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
-        prediction_dict[track_id] = prediction_dict[track_id][-10:]
-    
-    
     cv2.imshow('Video', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

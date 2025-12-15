@@ -2,14 +2,14 @@ import numpy as np
 import torch
 import cv2  
 from torchvision import transforms
-from facenet_pytorch import InceptionResnetV1
+from insightface.model_zoo import get_model
 from insightface.utils import face_align
 import torch.nn.functional as F
 import lancedb
 
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-model = InceptionResnetV1(pretrained="vggface2").eval().to(device)
+model = get_model(name = "/home/scifre/.insightface/models/buffalo_l/w600k_r50.onnx", providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 
 
 db = lancedb.connect("face_db")
@@ -33,18 +33,14 @@ def find_best_match(face_table, face_embedding, threshold=0.4):
     
 def get_face_embeddings(aligned_faces):
     """
-    Runs FaceNet on all aligned faces in a single batch.
-    Returns: numpy array [N, 512] normalized
+    aligned_faces: list of 112x112 BGR numpy images
+    returns: [N, 512] normalized
     """
-    if not aligned_faces:
-        return np.array([])
+    if len(aligned_faces) == 0:
+        return np.empty((0, 512))
 
-    face_tensors = [transform(face) for face in aligned_faces]
-    batched_tensor = torch.stack(face_tensors).to(device)
-
-    with torch.no_grad():
-        embeddings = model(batched_tensor)
-        embeddings = F.normalize(embeddings, p=2, dim=1).cpu().numpy()
+    embeddings = model.get(aligned_faces)  # ✅ correct
+    embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
 
     return embeddings
 
@@ -53,69 +49,43 @@ def align_faces(frame, landmarks):
     for lm in landmarks:
         if lm is None:
             continue
-        aligned_face = face_align.norm_crop(frame, lm, image_size=224)
-        aligned_face = cv2.resize(aligned_face, (160, 160))
+        aligned_face = face_align.norm_crop(frame, lm, image_size=112)
         aligned_face = cv2.cvtColor(aligned_face, cv2.COLOR_BGR2RGB)
         aligned_faces.append(aligned_face)
     return aligned_faces
 
-def batch_vector_search(embeddings, threshold):
-    """
-    Runs batched similarity search in LanceDB using IVF_FLAT with tuned params.
-    Uses cosine distance (lower is better). Returns list of (card_no, similarity).
-    Also echoes close matches back into the table with a date suffix (non-Unknown only).
-    """
+def vector_search(embedding, threshold):
+    if embedding is None:
+        return ("Unknown", float("inf"))
 
-    if embeddings is None or len(embeddings) == 0:
-        return []
+    emb = np.asarray(embedding, dtype=np.float32)
+    if emb.ndim != 1 or emb.shape[0] != 512:
+        print(f"Invalid embedding shape: {emb.shape}")
+        return ("Unknown", float("inf"))
 
-    # Normalize input shape to (N, 512) numpy
-    if isinstance(embeddings, list):
-        emb_np = np.asarray(embeddings, dtype=np.float32)
-    else:
-        emb_np = np.array(embeddings, dtype=np.float32, copy=False)
-    if emb_np.ndim == 1:
-        emb_np = emb_np.reshape(1, -1)
-
-    # Safety: empty or wrong last dim
-    if emb_np.size == 0 or emb_np.shape[-1] != 512:
-        print(f"Warning: invalid embeddings array shape: {emb_np.shape}")
-        return []
-
-    
     try:
-        results = (
+        res = (
             face_table
-            .search(emb_np, vector_column_name="embedding")
-            .metric("cosine")        
+            .search(emb, vector_column_name="embedding")
+            .metric("cosine")
             .select(["label", "_distance"])
             .limit(1)
             .to_list()
         )
     except Exception as e:
         print(f"LanceDB search error: {e}")
-        return []
+        return ("Unknown", float("inf"))
 
-    # Prepare outputs + optional echo-back writes
-    identity_results = []
-    
-    for i, res in enumerate(results):
-        label = res.get("label")
-        sim = res.get("_distance")
+    if not res:
+        return ("Unknown", float("inf"))
 
-        # Defensive defaults
-        if label is None or sim is None:
-            identity_results.append(("Unknown", float("inf")))
-            continue
+    label = res[0]["label"]
+    dist = res[0]["_distance"]
 
-        # Decide identity
-        if sim < threshold:
-            name = label.split("-")[0]
-        else:
-            name = "Unknown"
+    if label is None or dist is None or dist >= threshold:
+        return ("unknown", dist)
 
-        identity_results.append((name, sim))
-    return identity_results
+    return (label, dist)
 
 def prepare_deepsort_inputs(face_bboxes, identity_results):
     """
