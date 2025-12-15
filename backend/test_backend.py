@@ -16,6 +16,7 @@ import os
 from dotenv import load_dotenv
 from models import Detection, DetectionCreate, Coords
 from database import DB
+from face_database import face_db
 
 # Load environment variables from .env file
 load_dotenv()
@@ -30,17 +31,66 @@ CAMERA_CONFIG = {
     "cam_06": {"lat": 21.133, "lng": 81.772, "name": "Roof Access"},
 }
 
-# Test data - simulated criminals and police
+# Test data - simulated criminals and police with details
 TEST_CRIMINALS = [
-    {"name": "Rahul Verma", "person_id": "CRIM_001"},
-    {"name": "Vikash Singh", "person_id": "CRIM_002"},
-    {"name": "Ajay Kumar", "person_id": "CRIM_003"},
+    {
+        "name": "Rahul Verma", 
+        "person_id": "CRIM_001",
+        "crime": "Robbery",
+        "image_path": "/api/face-images/CRIM_001.jpg"
+    },
+    {
+        "name": "Vikash Singh", 
+        "person_id": "CRIM_002",
+        "crime": "Assault",
+        "image_path": "/api/face-images/CRIM_002.jpg"
+    },
+    {
+        "name": "Ajay Kumar", 
+        "person_id": "CRIM_003",
+        "crime": "Theft",
+        "image_path": "/api/face-images/CRIM_003.jpg"
+    },
 ]
 
 TEST_POLICE = [
-    {"name": "Officer Sharma", "person_id": "POLICE_001"},
-    {"name": "Officer Patel", "person_id": "POLICE_002"},
+    {
+        "name": "Officer Sharma", 
+        "person_id": "POLICE_001",
+        "crime": "N/A",
+        "image_path": "/api/face-images/POLICE_001.jpg"
+    },
+    {
+        "name": "Officer Patel", 
+        "person_id": "POLICE_002",
+        "crime": "N/A",
+        "image_path": "/api/face-images/POLICE_002.jpg"
+    },
 ]
+
+# Initialize face database with test data
+def initialize_face_database():
+    """Initialize face database with test person data."""
+    for criminal in TEST_CRIMINALS:
+        face_db.add_person(
+            person_id=criminal["person_id"],
+            name=criminal["name"],
+            category="B",
+            image_path=criminal["image_path"],
+            crime=criminal["crime"]
+        )
+    
+    for police in TEST_POLICE:
+        face_db.add_person(
+            person_id=police["person_id"],
+            name=police["name"],
+            category="A",
+            image_path=police["image_path"],
+            crime="N/A"
+        )
+
+# Initialize on import
+initialize_face_database()
 
 class WSManager:
     def __init__(self):
@@ -95,14 +145,38 @@ async def generate_test_detections(speed_multiplier: float = 1.0):
         camera_id = random.choice(list(CAMERA_CONFIG.keys()))
         camera_info = CAMERA_CONFIG[camera_id]
         
-        # Create detection
+        # Get person details from face database
+        person_details = face_db.get_person(person["person_id"])
+        timestamp = datetime.now().isoformat()
+        
+        # Update last seen
+        if person_details:
+            face_db.update_last_seen(person["person_id"], timestamp)
+        
+        # Create detection with person details
         detection_count += 1
+        det_data = {
+            "id": detection_count,
+            "detected": True,
+            "category": category,
+            "camera_id": camera_id,
+            "timestamp": timestamp,
+            "coords": {
+                "lat": camera_info["lat"],
+                "lng": camera_info["lng"]
+            },
+            "person_id": person["person_id"],
+            "person_name": person["name"],
+            "person_image": person.get("image_path", ""),
+            "crime": person.get("crime", "Unknown") if category == "B" else "N/A"
+        }
+        
         det = Detection(
             id=detection_count,
             detected=True,
             category=category,
             camera_id=camera_id,
-            timestamp=datetime.now().isoformat(),
+            timestamp=timestamp,
             coords=Coords(
                 lat=camera_info["lat"],
                 lng=camera_info["lng"]
@@ -112,9 +186,17 @@ async def generate_test_detections(speed_multiplier: float = 1.0):
         # Add to database
         db.add(det)
         
-        # Broadcast Category B (criminal) detections
+        # Broadcast Category B (criminal) detections with full details
         if category == "B":
-            await mgr.broadcast(det.dict())
+            # Include person details in broadcast
+            broadcast_data = {
+                **det_data,
+                "person_id": person["person_id"],
+                "person_name": person["name"],
+                "person_image": person.get("image_path", ""),
+                "crime": person.get("crime", "Unknown")
+            }
+            await mgr.broadcast(broadcast_data)
             print(f"[{datetime.now().strftime('%H:%M:%S')}] Detected {person['name']} ({person['person_id']}) at {camera_id}")
 
 @asynccontextmanager
@@ -164,8 +246,19 @@ async def report(data: DetectionCreate):
 
 @app.get("/get-detections")
 async def get_all():
-    """Get all detections."""
-    return {"detections": [d.dict() for d in db.detections]}
+    """Get all detections with person details."""
+    detections = []
+    for d in db.detections:
+        det_dict = d.dict()
+        # Try to get person details if person_id exists
+        if hasattr(d, 'person_id') and d.person_id:
+            person = face_db.get_person(d.person_id)
+            if person:
+                det_dict["person_name"] = person.get("name")
+                det_dict["person_image"] = person.get("image_path")
+                det_dict["crime"] = person.get("crime")
+        detections.append(det_dict)
+    return {"detections": detections}
 
 @app.websocket("/ws/detections")
 async def ws_endpoint(ws: WebSocket):
@@ -224,6 +317,46 @@ async def test_info():
         "criminals": TEST_CRIMINALS,
         "police": TEST_POLICE,
         "cameras": list(CAMERA_CONFIG.keys())
+    }
+
+@app.get("/api/face-images/{person_id}")
+async def get_face_image(person_id: str):
+    """Serve face images (placeholder for now - returns a data URI)."""
+    from fastapi.responses import Response
+    import base64
+    
+    # Get person details
+    person = face_db.get_person(person_id)
+    if not person:
+        return {"error": "Person not found"}
+    
+    # For now, return a placeholder image data URI
+    # In production, you would read the actual image file
+    from PIL import Image
+    import io
+    
+    # Create a simple placeholder image with person initial
+    img = Image.new('RGB', (200, 200), color=(73, 109, 137))
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    img_data = buffer.getvalue()
+    
+    return Response(content=img_data, media_type="image/png")
+
+@app.get("/api/person/{person_id}")
+async def get_person_details(person_id: str):
+    """Get person details by person_id."""
+    person = face_db.get_person(person_id)
+    if not person:
+        return {"error": "Person not found"}
+    return person
+
+@app.get("/api/persons")
+async def get_all_persons():
+    """Get all persons in database."""
+    return {
+        "criminals": face_db.get_all_criminals(),
+        "police": face_db.get_all_police()
     }
 
 if __name__ == "__main__":

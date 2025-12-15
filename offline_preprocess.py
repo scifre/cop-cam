@@ -18,12 +18,17 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 import cv2
 import json
 import os
+import sys
 import numpy as np
 from pathlib import Path
 from collections import defaultdict, Counter
 from insightface.model_zoo import get_model
 from deep_sort_realtime.deepsort_tracker import DeepSort
 from helper import align_faces, get_face_embeddings, batch_vector_search, prepare_deepsort_inputs
+
+# Add backend directory to path to import face_database
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
+from face_database import face_db
 
 # Configuration
 CCTV_DIR = "cctv"
@@ -62,12 +67,8 @@ detector.prepare(ctx_id=0, input_size=(640, 640))
 # Global tracking
 person_id_counter = {"A": 1, "B": 1}  # Separate counters for Police (A) and Criminal (B)
 name_to_person_id = {}  # Maps name -> person_id
-person_metadata = {}  # Stores metadata for each person_id
 global_timeline = []  # Global timeline of all detections
 all_detections = defaultdict(list)  # Per-camera detections
-
-# Track first seen info for each person
-first_seen_info = {}  # person_id -> {camera_id, time, face_image_path}
 
 
 def get_person_id(name, category):
@@ -85,7 +86,7 @@ def get_person_id(name, category):
 
 
 def save_face_image(frame, bbox, person_id, camera_id):
-    """Extract and save face image."""
+    """Extract and save face image to face database."""
     t, l, b, r = map(int, bbox)
     # Add padding
     padding = 20
@@ -96,9 +97,17 @@ def save_face_image(frame, bbox, person_id, camera_id):
     
     face_crop = frame[t:b, l:r]
     filename = f"{person_id}_{camera_id}.jpg"
-    filepath = os.path.join(FACES_DIR, filename)
+    
+    # Save to face database images directory
+    filepath = os.path.join(face_db.images_dir, filename)
     cv2.imwrite(filepath, face_crop)
-    return filepath
+    
+    # Also save to simulation_data/faces for compatibility
+    sim_filepath = os.path.join(FACES_DIR, filename)
+    cv2.imwrite(sim_filepath, face_crop)
+    
+    # Return API path
+    return f"/api/face-images/{person_id}"
 
 
 def save_embedding(person_id, embedding):
@@ -196,20 +205,45 @@ def process_video(video_path, camera_id, global_start_time=0.0):
                 # Get or create person_id
                 person_id = get_person_id(prediction, category)
                 
-                # Track first seen info
-                if person_id not in first_seen_info:
+                # Track first seen info and save to face database
+                person = face_db.get_person(person_id)
+                if not person:
+                    # First time seeing this person - save face image and create entry
                     face_image_path = save_face_image(frame, bbox, person_id, camera_id)
-                    # Store relative path
-                    face_image_rel_path = os.path.join("faces", os.path.basename(face_image_path))
-                    first_seen_info[person_id] = {
-                        "camera_id": camera_id,
-                        "time": global_time,
-                        "face_image_path": face_image_rel_path
+                    crime = "Unknown" if category == "B" else "N/A"
+                    
+                    # Get name from prediction (assuming format is just the name)
+                    person_name = prediction
+                    
+                    # Store first seen camera in additional_info
+                    additional_info = {
+                        "first_seen_camera": camera_id,
+                        "first_seen_time": global_time
                     }
                     
-                    # Save embedding if available
-                    if track_id in track_embeddings:
-                        save_embedding(person_id, track_embeddings[track_id])
+                    face_db.add_person(
+                        person_id=person_id,
+                        name=person_name,
+                        category=category,
+                        image_path=face_image_path,
+                        crime=crime,
+                        additional_info=additional_info
+                    )
+                    
+                    # Update first seen timestamp
+                    face_db.update_last_seen(person_id, f"{global_time:.2f}")
+                else:
+                    # Update last seen
+                    face_db.update_last_seen(person_id, f"{global_time:.2f}")
+                    face_image_path = person.get("image_path", "")
+                    
+                # Save embedding if available
+                if track_id in track_embeddings:
+                    save_embedding(person_id, track_embeddings[track_id])
+                
+                # Get person details from face database
+                person = face_db.get_person(person_id)
+                face_image_path = person.get("image_path", "") if person else ""
                 
                 # Create detection event
                 detection = {
@@ -220,7 +254,9 @@ def process_video(video_path, camera_id, global_start_time=0.0):
                     "frame_id": frame_count,
                     "bbox": bbox,
                     "confidence": float(score) if score is not None else 0.0,
-                    "face_image_path": first_seen_info[person_id]["face_image_path"]
+                    "face_image_path": face_image_path,
+                    "person_name": person.get("name", prediction) if person else prediction,
+                    "crime": person.get("crime", "Unknown") if person and category == "B" else "N/A"
                 }
                 
                 camera_detections.append(detection)
@@ -255,25 +291,20 @@ def process_video(video_path, camera_id, global_start_time=0.0):
 
 
 def build_criminals_metadata():
-    """Build criminals.json from first_seen_info and person_metadata."""
+    """Build criminals.json from face database."""
     criminals = {}
     
-    for person_id, info in first_seen_info.items():
-        if person_id.startswith("CRIM"):
-            # Extract name from person_id mapping
-            name = None
-            for n, pid in name_to_person_id.items():
-                if pid == person_id:
-                    name = n
-                    break
-            
-            criminals[person_id] = {
-                "name": name or "Unknown",
-                "crime": "Unknown",  # Could be extended with additional metadata
-                "first_seen_camera": info["camera_id"],
-                "first_seen_time": info["time"],
-                "face_image": info["face_image_path"]
-            }
+    # Get all criminals from face database
+    all_criminals = face_db.get_all_criminals()
+    
+    for person_id, person_data in all_criminals.items():
+        criminals[person_id] = {
+            "name": person_data.get("name", "Unknown"),
+            "crime": person_data.get("crime", "Unknown"),
+            "first_seen_camera": person_data.get("additional_info", {}).get("first_seen_camera", "Unknown"),
+            "first_seen_time": person_data.get("first_seen"),
+            "face_image": person_data.get("image_path", "")
+        }
     
     return criminals
 

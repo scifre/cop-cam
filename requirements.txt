@@ -3,6 +3,7 @@ opencv-python
 torch
 torchvision
 insightface
+onnxruntime
 deep-sort-realtime
 numpy
 pillow

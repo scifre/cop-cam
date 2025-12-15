@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from models import Detection, DetectionCreate
 from database import db
 from simulation import SimulationReplay
+from face_database import face_db
 
 # Load environment variables from .env file
 load_dotenv()
@@ -85,24 +86,68 @@ app.add_middleware(
 
 @app.post("/report-detection")
 async def report(data: DetectionCreate):
+    timestamp = data.timestamp or datetime.now().isoformat()
+    
+    # Create detection
     det = Detection(
         id=len(db.detections) + 1,
         detected=data.detected,
         category=data.category,
         camera_id=data.camera_id,
-        timestamp=data.timestamp or datetime.now().isoformat(),
-        coords=data.coords
+        timestamp=timestamp,
+        coords=data.coords,
+        person_id=data.person_id,
+        person_name=data.person_name,
+        person_image=data.person_image,
+        crime=data.crime
     )
     db.add(det)
     
+    # Update face database if person_id provided
+    if data.person_id:
+        # Update last seen timestamp
+        person = face_db.get_person(data.person_id)
+        if person:
+            face_db.update_last_seen(data.person_id, timestamp)
+        elif data.person_name:
+            # Create new person entry if doesn't exist
+            face_db.add_person(
+                person_id=data.person_id,
+                name=data.person_name,
+                category=data.category,
+                image_path=data.person_image or "",
+                crime=data.crime or "Unknown"
+            )
+    
+    # Broadcast Category B (criminal) detections with person details
     if data.detected and data.category == "B":
-        await mgr.broadcast(det.dict())
+        det_dict = det.dict()
+        # Ensure person details are included
+        if data.person_id:
+            person = face_db.get_person(data.person_id)
+            if person:
+                det_dict["person_name"] = person.get("name")
+                det_dict["person_image"] = person.get("image_path")
+                det_dict["crime"] = person.get("crime")
+        await mgr.broadcast(det_dict)
     
     return {"status": "ok", "id": det.id}
 
 @app.get("/get-detections")
 async def get_all():
-    return {"detections": [d.dict() for d in db.detections]}
+    """Get all detections with person details."""
+    detections = []
+    for d in db.detections:
+        det_dict = d.dict()
+        # Try to get person details if person_id exists
+        if hasattr(d, 'person_id') and d.person_id:
+            person = face_db.get_person(d.person_id)
+            if person:
+                det_dict["person_name"] = person.get("name")
+                det_dict["person_image"] = person.get("image_path")
+                det_dict["crime"] = person.get("crime")
+        detections.append(det_dict)
+    return {"detections": detections}
 
 @app.websocket("/ws/detections")
 async def ws_endpoint(ws: WebSocket):
@@ -156,6 +201,58 @@ async def simulation_status():
         "data_loaded": simulation_replay is not None,
         "is_running": simulation_replay.is_running if simulation_replay else False,
         "timeline_events": len(simulation_replay.timeline) if simulation_replay else 0
+    }
+
+@app.get("/api/face-images/{person_id}")
+async def get_face_image(person_id: str):
+    """Serve face images."""
+    from fastapi.responses import FileResponse, Response
+    import os
+    
+    # Get person details
+    person = face_db.get_person(person_id)
+    if not person:
+        return {"error": "Person not found"}
+    
+    image_path = person.get("image_path", "")
+    
+    # If image_path is relative, try to resolve it
+    if image_path and not image_path.startswith("/"):
+        # Check if it's in face_images_db/images
+        full_path = os.path.join(face_db.images_dir, os.path.basename(image_path))
+        if os.path.exists(full_path):
+            return FileResponse(full_path, media_type="image/jpeg")
+        
+        # Check simulation_data/faces
+        sim_faces_path = os.path.join("simulation_data", "faces", os.path.basename(image_path))
+        if os.path.exists(sim_faces_path):
+            return FileResponse(sim_faces_path, media_type="image/jpeg")
+    
+    # Fallback: return placeholder image
+    from PIL import Image
+    import io
+    
+    img = Image.new('RGB', (200, 200), color=(73, 109, 137))
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    img_data = buffer.getvalue()
+    
+    return Response(content=img_data, media_type="image/png")
+
+@app.get("/api/person/{person_id}")
+async def get_person_details(person_id: str):
+    """Get person details by person_id."""
+    person = face_db.get_person(person_id)
+    if not person:
+        return {"error": "Person not found"}
+    return person
+
+@app.get("/api/persons")
+async def get_all_persons():
+    """Get all persons in database."""
+    return {
+        "criminals": face_db.get_all_criminals(),
+        "police": face_db.get_all_police()
     }
 
 

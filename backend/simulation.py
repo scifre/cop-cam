@@ -10,6 +10,7 @@ import asyncio
 from typing import List, Dict, Optional
 from pathlib import Path
 from models import Detection, Coords
+from face_database import face_db
 
 SIMULATION_DATA_DIR = "simulation_data"
 TIMELINE_FILE = os.path.join(SIMULATION_DATA_DIR, "timeline.json")
@@ -67,6 +68,16 @@ class SimulationReplay:
                 with open(CRIMINALS_FILE, "r") as f:
                     self.criminals = json.load(f)
                 print(f"Loaded {len(self.criminals)} criminal records")
+                
+                # Import criminals into face database
+                for person_id, criminal_data in self.criminals.items():
+                    face_db.add_person(
+                        person_id=person_id,
+                        name=criminal_data.get("name", "Unknown"),
+                        category="B",
+                        image_path=criminal_data.get("face_image", ""),
+                        crime=criminal_data.get("crime", "Unknown")
+                    )
             
             return True
         
@@ -150,28 +161,47 @@ class SimulationReplay:
                     # Fallback coordinates
                     coords = Coords(lat=21.13, lng=81.77)
                 
-                # Create detection object
                 # Format timestamp as ISO string (simulation time)
                 from datetime import datetime, timedelta
                 base_time = datetime.now()
                 sim_timestamp = (base_time + timedelta(seconds=current_time)).isoformat()
                 
+                # Get person details from face database
+                person_id = detection_data.get("person_id")
+                person_details = None
+                if person_id:
+                    person_details = face_db.get_person(person_id)
+                    if person_details:
+                        face_db.update_last_seen(person_id, sim_timestamp)
+                
+                # Create detection object with person details
                 det = Detection(
                     id=len(self.db.detections) + 1,
                     detected=True,
                     category=category,
                     camera_id=camera_id,
                     timestamp=sim_timestamp,
-                    coords=coords
+                    coords=coords,
+                    person_id=person_id,
+                    person_name=person_details.get("name") if person_details else None,
+                    person_image=person_details.get("image_path") if person_details else None,
+                    crime=person_details.get("crime") if person_details else None
                 )
                 
                 # Add to database
                 self.db.add(det)
                 
-                # Broadcast Category B (criminal) detections via WebSocket
+                # Broadcast Category B (criminal) detections via WebSocket with full details
                 if category == "B":
-                    await self.ws_manager.broadcast(det.dict())
-                    print(f"[{current_time:.2f}s] Detected {detection_data['person_id']} at {camera_id}")
+                    det_dict = det.dict()
+                    # Ensure person details are included in broadcast
+                    if person_details:
+                        det_dict["person_name"] = person_details.get("name")
+                        det_dict["person_image"] = person_details.get("image_path")
+                        det_dict["crime"] = person_details.get("crime")
+                    await self.ws_manager.broadcast(det_dict)
+                    person_name = person_details.get("name") if person_details else person_id
+                    print(f"[{current_time:.2f}s] Detected {person_name} ({person_id}) at {camera_id}")
         
         self.is_running = False
         print("Simulation replay complete")
