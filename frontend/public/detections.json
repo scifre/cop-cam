@@ -1,0 +1,535 @@
+{
+  "metadata": {
+    "total_detections": 45,
+    "total_cameras": 6,
+    "cameras": {
+      "CAM_01": {
+        "video_file": "cp_lab1.mp4",
+        "output_video": "videos/CAM_01.mp4",
+        "location": {
+          "x": 0.0,
+          "y": 1.0,
+          "z": 0.0
+        }
+      },
+      "CAM_02": {
+        "video_file": "cp_lab2.mp4",
+        "output_video": "videos/CAM_02.mp4",
+        "location": {
+          "x": 0.866,
+          "y": 0.5,
+          "z": 0.0
+        }
+      },
+      "CAM_03": {
+        "video_file": "vlsi.mp4",
+        "output_video": "videos/CAM_03.mp4",
+        "location": {
+          "x": 0.866,
+          "y": -0.5,
+          "z": 0.0
+        }
+      },
+      "CAM_04": {
+        "video_file": "iot.mp4",
+        "output_video": "videos/CAM_04.mp4",
+        "location": {
+          "x": 0.0,
+          "y": -1.0,
+          "z": 0.0
+        }
+      },
+      "CAM_05": {
+        "video_file": "lift.mp4",
+        "output_video": "videos/CAM_05.mp4",
+        "location": {
+          "x": -0.866,
+          "y": -0.5,
+          "z": 0.0
+        }
+      },
+      "CAM_06": {
+        "video_file": "loby.mp4",
+        "output_video": "videos/CAM_06.mp4",
+        "location": {
+          "x": -0.866,
+          "y": 0.5,
+          "z": 0.0
+        }
+      }
+    }
+  },
+  "detections": [
+    {
+      "timestamp": 2.5,
+      "frame_id": 75,
+      "camera_id": "CAM_01",
+      "track_id": 1,
+      "person_id": "ayush",
+      "bbox": [150, 100, 300, 400],
+      "confidence": 0.85,
+      "detection_confidence": 0.92
+    },
+    {
+      "timestamp": 3.2,
+      "frame_id": 96,
+      "camera_id": "CAM_01",
+      "track_id": 1,
+      "person_id": "ayush",
+      "bbox": [155, 105, 305, 405],
+      "confidence": null,
+      "detection_confidence": 0.91
+    },
+    {
+      "timestamp": 5.8,
+      "frame_id": 174,
+      "camera_id": "CAM_02",
+      "track_id": 2,
+      "person_id": "kanika",
+      "bbox": [200, 150, 350, 450],
+      "confidence": 0.88,
+      "detection_confidence": 0.94
+    },
+    {
+      "timestamp": 6.5,
+      "frame_id": 195,
+      "camera_id": "CAM_02",
+      "track_id": 2,
+      "person_id": "kanika",
+      "bbox": [205, 155, 355, 455],
+      "confidence": null,
+      "detection_confidence": 0.93
+    },
+    {
+      "timestamp": 8.1,
+      "frame_id": 243,
+      "camera_id": "CAM_03",
+      "track_id": 3,
+      "person_id": "ayush",
+      "bbox": [100, 80, 250, 380],
+      "confidence": 0.82,
+      "detection_confidence": 0.89
+    },
+    {
+      "timestamp": 9.3,
+      "frame_id": 279,
+      "camera_id": "CAM_03",
+      "track_id": 3,
+      "person_id": "ayush",
+      "bbox": [105, 85, 255, 385],
+      "confidence": null,
+      "detection_confidence": 0.88
+    },
+    {
+      "timestamp": 12.4,
+      "frame_id": 372,
+      "camera_id": "CAM_04",
+      "track_id": 4,
+      "person_id": "unknown",
+      "bbox": [180, 120, 330, 420],
+      "confidence": null,
+      "detection_confidence": 0.87
+    },
+    {
+      "timestamp": 13.7,
+      "frame_id": 411,
+      "camera_id": "CAM_04",
+      "track_id": 5,
+      "person_id": "kanika",
+      "bbox": [220, 160, 370, 460],
+      "confidence": 0.86,
+      "detection_confidence": 0.91
+    },
+    {
+      "timestamp": 15.2,
+      "frame_id": 456,
+      "camera_id": "CAM_05",
+      "track_id": 6,
+      "person_id": "ayush",
+      "bbox": [130, 90, 280, 390],
+      "confidence": 0.84,
+      "detection_confidence": 0.90
+    },
+    {
+      "timestamp": 16.8,
+      "frame_id": 504,
+      "camera_id": "CAM_05",
+      "track_id": 6,
+      "person_id": "ayush",
+      "bbox": [135, 95, 285, 395],
+      "confidence": null,
+      "detection_confidence": 0.89
+    },
+    {
+      "timestamp": 18.5,
+      "frame_id": 555,
+      "camera_id": "CAM_06",
+      "track_id": 7,
+      "person_id": "kanika",
+      "bbox": [190, 140, 340, 440],
+      "confidence": 0.87,
+      "detection_confidence": 0.93
+    },
+    {
+      "timestamp": 20.1,
+      "frame_id": 603,
+      "camera_id": "CAM_01",
+      "track_id": 8,
+      "person_id": "unknown",
+      "bbox": [160, 110, 310, 410],
+      "confidence": null,
+      "detection_confidence": 0.85
+    },
+    {
+      "timestamp": 22.3,
+      "frame_id": 669,
+      "camera_id": "CAM_02",
+      "track_id": 9,
+      "person_id": "ayush",
+      "bbox": [140, 100, 290, 400],
+      "confidence": 0.83,
+      "detection_confidence": 0.88
+    },
+    {
+      "timestamp": 24.7,
+      "frame_id": 741,
+      "camera_id": "CAM_03",
+      "track_id": 10,
+      "person_id": "kanika",
+      "bbox": [210, 150, 360, 460],
+      "confidence": 0.89,
+      "detection_confidence": 0.95
+    },
+    {
+      "timestamp": 26.2,
+      "frame_id": 786,
+      "camera_id": "CAM_04",
+      "track_id": 11,
+      "person_id": "unknown",
+      "bbox": [170, 115, 320, 415],
+      "confidence": null,
+      "detection_confidence": 0.86
+    },
+    {
+      "timestamp": 28.9,
+      "frame_id": 867,
+      "camera_id": "CAM_05",
+      "track_id": 12,
+      "person_id": "kanika",
+      "bbox": [195, 145, 345, 445],
+      "confidence": 0.88,
+      "detection_confidence": 0.92
+    },
+    {
+      "timestamp": 30.5,
+      "frame_id": 915,
+      "camera_id": "CAM_06",
+      "track_id": 13,
+      "person_id": "ayush",
+      "bbox": [125, 85, 275, 385],
+      "confidence": 0.85,
+      "detection_confidence": 0.91
+    },
+    {
+      "timestamp": 32.1,
+      "frame_id": 963,
+      "camera_id": "CAM_01",
+      "track_id": 14,
+      "person_id": "kanika",
+      "bbox": [175, 125, 325, 425],
+      "confidence": 0.87,
+      "detection_confidence": 0.94
+    },
+    {
+      "timestamp": 34.8,
+      "frame_id": 1044,
+      "camera_id": "CAM_02",
+      "track_id": 15,
+      "person_id": "unknown",
+      "bbox": [145, 105, 295, 405],
+      "confidence": null,
+      "detection_confidence": 0.84
+    },
+    {
+      "timestamp": 36.4,
+      "frame_id": 1092,
+      "camera_id": "CAM_03",
+      "track_id": 16,
+      "person_id": "ayush",
+      "bbox": [165, 115, 315, 415],
+      "confidence": 0.86,
+      "detection_confidence": 0.90
+    },
+    {
+      "timestamp": 38.7,
+      "frame_id": 1161,
+      "camera_id": "CAM_04",
+      "track_id": 17,
+      "person_id": "kanika",
+      "bbox": [185, 135, 335, 435],
+      "confidence": 0.90,
+      "detection_confidence": 0.96
+    },
+    {
+      "timestamp": 40.2,
+      "frame_id": 1206,
+      "camera_id": "CAM_05",
+      "track_id": 18,
+      "person_id": "unknown",
+      "bbox": [155, 110, 305, 410],
+      "confidence": null,
+      "detection_confidence": 0.83
+    },
+    {
+      "timestamp": 42.6,
+      "frame_id": 1278,
+      "camera_id": "CAM_06",
+      "track_id": 19,
+      "person_id": "ayush",
+      "bbox": [135, 95, 285, 395],
+      "confidence": 0.84,
+      "detection_confidence": 0.89
+    },
+    {
+      "timestamp": 44.3,
+      "frame_id": 1329,
+      "camera_id": "CAM_01",
+      "track_id": 20,
+      "person_id": "kanika",
+      "bbox": [205, 155, 355, 455],
+      "confidence": 0.91,
+      "detection_confidence": 0.97
+    },
+    {
+      "timestamp": 46.8,
+      "frame_id": 1404,
+      "camera_id": "CAM_02",
+      "track_id": 21,
+      "person_id": "ayush",
+      "bbox": [120, 80, 270, 380],
+      "confidence": 0.82,
+      "detection_confidence": 0.87
+    },
+    {
+      "timestamp": 48.5,
+      "frame_id": 1455,
+      "camera_id": "CAM_03",
+      "track_id": 22,
+      "person_id": "unknown",
+      "bbox": [150, 105, 300, 405],
+      "confidence": null,
+      "detection_confidence": 0.85
+    },
+    {
+      "timestamp": 50.1,
+      "frame_id": 1503,
+      "camera_id": "CAM_04",
+      "track_id": 23,
+      "person_id": "kanika",
+      "bbox": [190, 140, 340, 440],
+      "confidence": 0.88,
+      "detection_confidence": 0.93
+    },
+    {
+      "timestamp": 52.4,
+      "frame_id": 1572,
+      "camera_id": "CAM_05",
+      "track_id": 24,
+      "person_id": "ayush",
+      "bbox": [110, 75, 260, 375],
+      "confidence": 0.81,
+      "detection_confidence": 0.86
+    },
+    {
+      "timestamp": 54.2,
+      "frame_id": 1626,
+      "camera_id": "CAM_06",
+      "track_id": 25,
+      "person_id": "kanika",
+      "bbox": [215, 160, 365, 465],
+      "confidence": 0.89,
+      "detection_confidence": 0.95
+    },
+    {
+      "timestamp": 56.7,
+      "frame_id": 1701,
+      "camera_id": "CAM_01",
+      "track_id": 26,
+      "person_id": "unknown",
+      "bbox": [140, 100, 290, 400],
+      "confidence": null,
+      "detection_confidence": 0.82
+    },
+    {
+      "timestamp": 58.3,
+      "frame_id": 1749,
+      "camera_id": "CAM_02",
+      "track_id": 27,
+      "person_id": "ayush",
+      "bbox": [160, 115, 310, 415],
+      "confidence": 0.85,
+      "detection_confidence": 0.91
+    },
+    {
+      "timestamp": 60.1,
+      "frame_id": 1803,
+      "camera_id": "CAM_03",
+      "track_id": 28,
+      "person_id": "kanika",
+      "bbox": [200, 150, 350, 450],
+      "confidence": 0.87,
+      "detection_confidence": 0.94
+    },
+    {
+      "timestamp": 62.5,
+      "frame_id": 1875,
+      "camera_id": "CAM_04",
+      "track_id": 29,
+      "person_id": "unknown",
+      "bbox": [130, 90, 280, 390],
+      "confidence": null,
+      "detection_confidence": 0.84
+    },
+    {
+      "timestamp": 64.8,
+      "frame_id": 1944,
+      "camera_id": "CAM_05",
+      "track_id": 30,
+      "person_id": "ayush",
+      "bbox": [170, 120, 320, 420],
+      "confidence": 0.83,
+      "detection_confidence": 0.88
+    },
+    {
+      "timestamp": 66.4,
+      "frame_id": 1992,
+      "camera_id": "CAM_06",
+      "track_id": 31,
+      "person_id": "kanika",
+      "bbox": [180, 130, 330, 430],
+      "confidence": 0.86,
+      "detection_confidence": 0.92
+    },
+    {
+      "timestamp": 68.9,
+      "frame_id": 2067,
+      "camera_id": "CAM_01",
+      "track_id": 32,
+      "person_id": "ayush",
+      "bbox": [145, 105, 295, 405],
+      "confidence": 0.84,
+      "detection_confidence": 0.90
+    },
+    {
+      "timestamp": 70.2,
+      "frame_id": 2106,
+      "camera_id": "CAM_02",
+      "track_id": 33,
+      "person_id": "unknown",
+      "bbox": [155, 110, 305, 410],
+      "confidence": null,
+      "detection_confidence": 0.83
+    },
+    {
+      "timestamp": 72.6,
+      "frame_id": 2178,
+      "camera_id": "CAM_03",
+      "track_id": 34,
+      "person_id": "kanika",
+      "bbox": [195, 145, 345, 445],
+      "confidence": 0.88,
+      "detection_confidence": 0.93
+    },
+    {
+      "timestamp": 74.3,
+      "frame_id": 2229,
+      "camera_id": "CAM_04",
+      "track_id": 35,
+      "person_id": "ayush",
+      "bbox": [125, 85, 275, 385],
+      "confidence": 0.82,
+      "detection_confidence": 0.87
+    },
+    {
+      "timestamp": 76.8,
+      "frame_id": 2304,
+      "camera_id": "CAM_05",
+      "track_id": 36,
+      "person_id": "kanika",
+      "bbox": [210, 155, 360, 460],
+      "confidence": 0.90,
+      "detection_confidence": 0.96
+    },
+    {
+      "timestamp": 78.5,
+      "frame_id": 2355,
+      "camera_id": "CAM_06",
+      "track_id": 37,
+      "person_id": "unknown",
+      "bbox": [135, 95, 285, 395],
+      "confidence": null,
+      "detection_confidence": 0.85
+    },
+    {
+      "timestamp": 80.1,
+      "frame_id": 2403,
+      "camera_id": "CAM_01",
+      "track_id": 38,
+      "person_id": "ayush",
+      "bbox": [165, 115, 315, 415],
+      "confidence": 0.86,
+      "detection_confidence": 0.91
+    },
+    {
+      "timestamp": 82.4,
+      "frame_id": 2472,
+      "camera_id": "CAM_02",
+      "track_id": 39,
+      "person_id": "kanika",
+      "bbox": [185, 135, 335, 435],
+      "confidence": 0.87,
+      "detection_confidence": 0.94
+    },
+    {
+      "timestamp": 84.7,
+      "frame_id": 2541,
+      "camera_id": "CAM_03",
+      "track_id": 40,
+      "person_id": "unknown",
+      "bbox": [150, 105, 300, 405],
+      "confidence": null,
+      "detection_confidence": 0.84
+    },
+    {
+      "timestamp": 86.2,
+      "frame_id": 2586,
+      "camera_id": "CAM_04",
+      "track_id": 41,
+      "person_id": "ayush",
+      "bbox": [115, 80, 265, 380],
+      "confidence": 0.81,
+      "detection_confidence": 0.86
+    },
+    {
+      "timestamp": 88.9,
+      "frame_id": 2667,
+      "camera_id": "CAM_05",
+      "track_id": 42,
+      "person_id": "kanika",
+      "bbox": [205, 150, 355, 455],
+      "confidence": 0.89,
+      "detection_confidence": 0.95
+    },
+    {
+      "timestamp": 90.5,
+      "frame_id": 2715,
+      "camera_id": "CAM_06",
+      "track_id": 43,
+      "person_id": "ayush",
+      "bbox": [140, 100, 290, 400],
+      "confidence": 0.83,
+      "detection_confidence": 0.88
+    }
+  ]
+}
+

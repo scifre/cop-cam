@@ -9,7 +9,19 @@ import lancedb
 
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-model = get_model(name = "/home/scifre/.insightface/models/buffalo_l/w600k_r50.onnx", providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+
+# Note: This model is only used in get_face_embeddings() function
+# test.py uses FaceAnalysis directly, so this model may not be needed
+# If you need to use get_face_embeddings(), ensure InsightFace model is downloaded first
+import os
+model_path = os.path.expanduser("~/.insightface/models/buffalo_l/w600k_r50.onnx")
+
+# Initialize model only if path exists, otherwise set to None
+# InsightFace will auto-download models when using FaceAnalysis
+if os.path.exists(model_path):
+    model = get_model(name=model_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+else:
+    model = None  # Model not available - use FaceAnalysis instead for embeddings
 
 
 db = lancedb.connect("face_db")
@@ -29,13 +41,17 @@ def find_best_match(face_table, face_embedding, threshold=0.4):
     if distance <threshold:
         return label, distance
     else:
-        return "Uknown-Unknown", distance
+        return "Unknown-Unknown", distance
     
 def get_face_embeddings(aligned_faces):
     """
     aligned_faces: list of 112x112 BGR numpy images
     returns: [N, 512] normalized
+    Note: This function requires model to be initialized. 
+    If model is None, use FaceAnalysis.get() instead (as done in test.py)
     """
+    if model is None:
+        raise ValueError("Model not initialized. Use FaceAnalysis for embeddings instead.")
     if len(aligned_faces) == 0:
         return np.empty((0, 512))
 
