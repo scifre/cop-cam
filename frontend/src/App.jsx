@@ -236,11 +236,26 @@ function App() {
   return (
     <div className="app">
       <div className="header">
-        <h1>🎯 Live Detection Monitor</h1>
+        <h1>Live Detection Monitor</h1>
         <div className="header-right">
-          <div className="legend">
-            <span className="badge blue">Known Person</span>
-            <span className="badge red">Unknown Person</span>
+          <div className="header-controls">
+            <button 
+              className="control-button-small" 
+              onClick={handlePlayPause}
+              disabled={!videosReady}
+            >
+              {isPlaying ? '⏸' : '▶'}
+            </button>
+            <button 
+              className="control-button-small" 
+              onClick={handleReset}
+              disabled={!videosReady}
+            >
+              ⏮
+            </button>
+            <div className="time-display-small">
+              {Math.floor(currentTime / 60)}:{(Math.floor(currentTime % 60)).toString().padStart(2, '0')}
+            </div>
           </div>
           <div className="view-toggle">
             <button 
@@ -269,26 +284,6 @@ function App() {
         masterVideoRef={masterVideoRef}
         isPlaying={isPlaying}
       />
-      
-      <div className="controls">
-        <button 
-          className="control-button" 
-          onClick={handlePlayPause}
-          disabled={!videosReady}
-        >
-          {isPlaying ? '⏸ Pause' : '▶ Play'}
-        </button>
-        <button 
-          className="control-button" 
-          onClick={handleReset}
-          disabled={!videosReady}
-        >
-          ⏮ Reset
-        </button>
-        <div className="time-display">
-          Time: {Math.floor(currentTime / 60)}:{(Math.floor(currentTime % 60)).toString().padStart(2, '0')}
-        </div>
-      </div>
 
       <div className="container">
         {viewMode === 'grid' ? (

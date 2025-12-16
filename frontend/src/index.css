@@ -31,6 +31,46 @@ body {
   align-items: center;
 }
 
+.header-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.control-button-small {
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  min-width: 36px;
+}
+
+.control-button-small:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.control-button-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.time-display-small {
+  font-weight: 600;
+  color: white;
+  font-size: 0.9rem;
+  padding: 0 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .view-toggle {
   display: flex;
   gap: 0.5rem;
@@ -810,38 +850,5 @@ body {
   display: block;
 }
 
-.controls {
-  padding: 1.5rem 2rem;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.control-button {
-  padding: 0.6rem 1.2rem;
-  background: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.control-button:hover {
-  background: #4338ca;
-}
-
-.control-button:disabled {
-  background: #94a3b8;
-  cursor: not-allowed;
-}
-
-.time-display {
-  font-weight: 600;
-  color: #64748b;
-  font-size: 0.9rem;
-}
+/* Controls moved to header - removed standalone controls section */
 

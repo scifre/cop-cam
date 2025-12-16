@@ -14,38 +14,21 @@ function Sidebar({ recentDetections, totalDetections, allDetections, currentTime
   const [alertedPersons, setAlertedPersons] = useState(new Set())
 
   useEffect(() => {
-    // Filter out unknown detections
-    const filterUnknown = (dets) => {
-      return dets.filter(det => {
+    // Filter out unknown detections and show only recent
+    const filteredDetections = recentDetections
+      .filter(det => {
         const personId = (det.person_id || '').toLowerCase()
         return personId !== 'unknown' && personId !== ''
       })
-    }
+      .sort((a, b) => {
+        const timeA = typeof a.timestamp === 'number' ? a.timestamp : parseFloat(a.timestamp)
+        const timeB = typeof b.timestamp === 'number' ? b.timestamp : parseFloat(b.timestamp)
+        return timeB - timeA
+      })
+      .slice(0, 50) // Limit to 50 for performance
     
-    if (showMode === 'recent') {
-      // Show most recent triggered detections (last 20), excluding unknown
-      const recent = filterUnknown(recentDetections)
-        .sort((a, b) => {
-          const timeA = typeof a.timestamp === 'number' ? a.timestamp : parseFloat(a.timestamp)
-          const timeB = typeof b.timestamp === 'number' ? b.timestamp : parseFloat(b.timestamp)
-          return timeB - timeA
-        })
-        .slice(0, 20)
-      
-      setDisplayedDetections(recent)
-    } else {
-      // Show all detections, sorted by timestamp, excluding unknown
-      const all = filterUnknown(allDetections || [])
-        .sort((a, b) => {
-          const timeA = typeof a.timestamp === 'number' ? a.timestamp : parseFloat(a.timestamp)
-          const timeB = typeof b.timestamp === 'number' ? b.timestamp : parseFloat(b.timestamp)
-          return timeB - timeA
-        })
-        .slice(0, 50) // Limit to 50 for performance
-      
-      setDisplayedDetections(all)
-    }
-  }, [recentDetections, allDetections, showMode])
+    setDisplayedDetections(filteredDetections)
+  }, [recentDetections])
   
   // Track alerted persons (excluding unknown)
   useEffect(() => {
@@ -107,12 +90,6 @@ function Sidebar({ recentDetections, totalDetections, allDetections, currentTime
         >
           Recent ({displayedDetections.length})
         </button>
-        <button 
-          className={`sidebar-button ${showMode === 'all' ? 'active' : ''}`}
-          onClick={() => setShowMode('all')}
-        >
-          All ({knownDetectionsCount})
-        </button>
       </div>
       {currentTime > 0 && (
         <div className="current-time-indicator">
@@ -122,9 +99,7 @@ function Sidebar({ recentDetections, totalDetections, allDetections, currentTime
       <div className="list">
         {displayedDetections.length === 0 ? (
           <div className="empty">
-            {showMode === 'recent' 
-              ? 'No detections triggered yet. Play video to see detections.'
-              : 'No detections found.'}
+            No detections triggered yet. Play video to see detections.
           </div>
         ) : (
           displayedDetections.map((det, i) => {
